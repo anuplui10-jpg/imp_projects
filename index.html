@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anup — Computer Engineering Student & Python Developer</title>
+  
+  <!-- Preconnect to Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600;700&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Offline-first Vendor React & Babel scripts with CDN fallback -->
+  <script src="vendor/react.production.min.js" onerror="this.onerror=null;this.src='https://unpkg.com/react@18/umd/react.production.min.js'"></script>
+  <script src="vendor/react-dom.production.min.js" onerror="this.onerror=null;this.src='https://unpkg.com/react-dom@18/umd/react-dom.production.min.js'"></script>
+  <script src="vendor/babel.min.js" onerror="this.onerror=null;this.src='https://unpkg.com/@babel/standalone/babel.min.js'"></script>
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: '#eb0e09',
+            brandDark: '#120202',
+            gold: '#e6ca85',
+            champagne: '#f7edd2',
+          },
+          fontFamily: {
+            dancing: ['Dancing Script', 'cursive'],
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+            syne: ['Syne', 'sans-serif'],
+            mono: ['Space Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* CRITICAL CONSTRAINT 1: No CSS 3D transforms on page/canvas container. Rock-solid motionless body. */
+    :root {
+      --bg-color: #eb0e09;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    
+    body {
+      background-color: var(--bg-color);
+      color: #ffffff;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      overflow-x: hidden;
+      cursor: none; /* Replaced by ultra-smooth custom magnetic cursor */
+    }
+
+    /* Links and buttons retain cursor: none so custom cursor stays visible */
+    a, button, input, textarea, select {
+      cursor: none !important;
+    }
+
+    /* Seamless full-screen canvas with zero 3D transforms */
+    .character-canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover;
+      object-position: center center;
+      background-color: var(--bg-color);
+      transform: none !important;
+      perspective: none !important;
+    }
+
+    /* Subtle grain texture overlay for luxury editorial feel */
+    .noise-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 40;
+      opacity: 0.035;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    }
+
+    /* Frosted glass components */
+    .frosted-nav {
+      background: rgba(14, 2, 2, 0.4);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
+    }
+
+    .glass-card {
+      background: rgba(14, 2, 2, 0.6);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    /* ZERO-LAG HARDWARE-ACCELERATED CUSTOM MAGNETIC CURSOR */
+    .cursor-dot {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 6px;
+      height: 6px;
+      margin-left: -3px;
+      margin-top: -3px;
+      background-color: #ffffff;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 99999;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.95), 0 0 20px rgba(255, 255, 255, 0.6);
+      will-change: transform;
+    }
+
+    .cursor-aura {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 36px;
+      height: 36px;
+      margin-left: -18px;
+      margin-top: -18px;
+      border: 1.5px solid rgba(255, 255, 255, 0.75);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 99998;
+      opacity: 0;
+      background: rgba(255, 255, 255, 0.06);
+      box-shadow: 0 0 15px rgba(255, 255, 255, 0.25);
+      transition: opacity 0.25s ease, 
+                  border-color 0.25s ease, 
+                  background-color 0.25s ease, 
+                  box-shadow 0.25s ease;
+      will-change: transform;
+    }
+
+    .cursor-aura.hovering {
+      border-color: #ffffff;
+      background: rgba(255, 255, 255, 0.16);
+      box-shadow: 0 0 25px rgba(255, 255, 255, 0.65);
+    }
+
+    .cursor-aura.eye-contact {
+      border-color: #e6ca85;
+      background: rgba(230, 202, 133, 0.15);
+      box-shadow: 0 0 30px rgba(230, 202, 133, 0.65);
+    }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #eb0e09;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 3px;
+    }
+
+    /* Script drop shadow */
+    .name-shadow {
+      text-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
+    }
+  </style>
+</head>
+<body>
+  <div class="noise-overlay"></div>
+  
+  <!-- Hardware-Accelerated Custom Magnetic Cursor Elements -->
+  <div id="cursor-dot" class="cursor-dot hidden md:block"></div>
+  <div id="cursor-aura" class="cursor-aura hidden md:block"></div>
+
+  <div id="root"></div>
+
+  <!-- Main React Application -->
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback } = React;
+
+    // Fast, shortest-path circular angular lerp
+    // Responsive factor ~0.24 provides snappy, ultra-smooth ~35ms tracking with zero lag
+    function lerpAngle(current, target, factor = 0.24) {
+      let diff = (target - current) % (Math.PI * 2);
+      diff = ((diff + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+      let next = current + diff * factor;
+      return ((next + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
+    }
+
+    // Compass Direction angles in radians (0 = RIGHT, clockwise)
+    const COMPASS_ANGLES = {
+      'RIGHT': 0,
+      'DOWN-RIGHT': Math.PI / 4,
+      'DOWN': Math.PI / 2,
+      'DOWN-LEFT': (3 * Math.PI) / 4,
+      'LEFT': Math.PI,
+      'UP-LEFT': -(3 * Math.PI) / 4,
+      'UP': -Math.PI / 2,
+      'UP-RIGHT': -Math.PI / 4,
+    };
+
+    // =========================================================================
+    // 🔗 PERSONAL PROFILE & SOCIAL LINKS CONFIGURATION
+    // =========================================================================
+    const PERSONAL_LINKS = {
+      // 👉 LINKEDIN PROFILE URL:
+      linkedin: "https://www.linkedin.com/in/anup-luitel-0b062440a",
+      
+      // 👉 GITHUB PROFILE URL:
+      github: "https://github.com/your-username-here",
+      
+      // 👉 YOUR EMAIL ADDRESS:
+      email: "anuplui10@gmail.com",
+      
+      // 👉 X / TWITTER (optional):
+      twitter: "https://twitter.com/your-username-here"
+    };
+
+    // Auto-normalizes URLs (e.g. handles "www.linkedin.com" -> "https://www.linkedin.com")
+    const formatUrl = (url) => {
+      if (!url) return '#';
+      if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('mailto:')) return url;
+      return `https://${url}`;
+    };
+
+    function App() {
+      // High-level telemetry state (throttled to avoid React render lag)
+      const [telemetry, setTelemetry] = useState({
+        angleDeg: 0,
+        direction: 'CENTER',
+        frameIndex: 0,
+        isEyeContact: true,
+        fps: 60,
+      });
+      const [mode, setMode] = useState('tracking'); // 'tracking', 'orbit', 'compass'
+      const [showHud, setShowHud] = useState(false);
+      const [showResumeModal, setShowResumeModal] = useState(false);
+      const [framesLoadedCount, setFramesLoadedCount] = useState(0);
+
+      // Email interaction helpers
+      const [copiedEmail, setCopiedEmail] = useState(false);
+      const cleanEmail = (PERSONAL_LINKS.email || '').replace(/^mailto:/, '').trim();
+      const gmailComposeUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(cleanEmail)}`;
+      const mailtoUrl = `mailto:${cleanEmail}`;
+
+      const handleCopyEmail = () => {
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(cleanEmail);
+        }
+        setCopiedEmail(true);
+        setTimeout(() => setCopiedEmail(false), 2500);
+      };
+
+      // Animation & Canvas Refs (100% decoupled from React state renders)
+      const canvasRef = useRef(null);
+      const framesRef = useRef([]);
+      const centerFrameRef = useRef(null);
+      const lastRenderedImgRef = useRef(null);
+      const lastDrawnFrameIndexRef = useRef(-1);
+      const lastDrawnEyeContactRef = useRef(null);
+      const currentAngleRef = useRef(0);
+      const targetAngleRef = useRef(0);
+      const isEyeContactRef = useRef(true);
+      const orbitAngleRef = useRef(0);
+      const animFrameIdRef = useRef(null);
+      const showHudRef = useRef(showHud);
+
+      // Decoupled Mouse State (updated in raw event listener, 0ms latency)
+      const mouseRef = useRef({
+        x: window.innerWidth / 2,
+        y: window.innerHeight / 2,
+        active: false,
+        isHovering: false,
+        isMouseDown: false,
+      });
+      const smoothMouseRef = useRef({
+        x: window.innerWidth / 2,
+        y: window.innerHeight / 2,
+      });
+      const auraPosRef = useRef({
+        x: window.innerWidth / 2,
+        y: window.innerHeight / 2,
+        scale: 1,
+      });
+
+      // Synchronize showHud to ref to avoid re-binding rAF loop on HUD toggle
+      useEffect(() => {
+        showHudRef.current = showHud;
+      }, [showHud]);
+
+      // Preload 64 WebP frames + center.webp
+      useEffect(() => {
+        let loaded = 0;
+        const frames = [];
+
+        // Center neutral frame (direct eye contact)
+        const centerImg = new Image();
+        centerImg.src = 'frames/center.webp';
+        centerImg.onload = () => {
+          loaded++;
+          setFramesLoadedCount(loaded);
+          if (!lastRenderedImgRef.current) {
+            lastRenderedImgRef.current = centerImg;
+          }
+        };
+        centerFrameRef.current = centerImg;
+
+        // 64 circular trajectory frames
+        for (let i = 0; i < 64; i++) {
+          const img = new Image();
+          img.src = `frames/${i}.webp`;
+          img.onload = () => {
+            loaded++;
+            setFramesLoadedCount(loaded);
+          };
+          frames.push(img);
+        }
+        framesRef.current = frames;
+      }, []);
+
+      // ZERO-LAG HARDWARE-ACCELERATED CURSOR LISTENER
+      useEffect(() => {
+        const dotEl = document.getElementById('cursor-dot');
+        const auraEl = document.getElementById('cursor-aura');
+
+        const onMouseMove = (e) => {
+          mouseRef.current.x = e.clientX;
+          mouseRef.current.y = e.clientY;
+          mouseRef.current.active = true;
+
+          // Direct hardware-accelerated transform update with ZERO React re-render
+          if (dotEl) {
+            dotEl.style.transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0)`;
+            dotEl.style.opacity = '1';
+          }
+          if (auraEl && auraEl.style.opacity !== '1') {
+            auraEl.style.opacity = '1';
+          }
+
+          if (mode === 'compass') {
+            setMode('tracking');
+          }
+        };
+
+        const onMouseDown = () => {
+          mouseRef.current.isMouseDown = true;
+        };
+
+        const onMouseUp = () => {
+          mouseRef.current.isMouseDown = false;
+        };
+
+        const onMouseOver = (e) => {
+          const t = e.target;
+          if (
+            t.tagName === 'A' || 
+            t.tagName === 'BUTTON' || 
+            t.closest('a') || 
+            t.closest('button') ||
+            t.classList.contains('interactive-hover')
+          ) {
+            mouseRef.current.isHovering = true;
+            if (auraEl) auraEl.classList.add('hovering');
+          } else {
+            mouseRef.current.isHovering = false;
+            if (auraEl) auraEl.classList.remove('hovering');
+          }
+        };
+
+        const onMouseLeave = () => {
+          mouseRef.current.active = false;
+          if (dotEl) dotEl.style.opacity = '0';
+          if (auraEl) auraEl.style.opacity = '0';
+        };
+
+        const onMouseEnter = () => {
+          mouseRef.current.active = true;
+          if (dotEl) dotEl.style.opacity = '1';
+          if (auraEl) auraEl.style.opacity = '1';
+        };
+
+        window.addEventListener('mousemove', onMouseMove, { passive: true });
+        window.addEventListener('mousedown', onMouseDown, { passive: true });
+        window.addEventListener('mouseup', onMouseUp, { passive: true });
+        window.addEventListener('mouseover', onMouseOver, { passive: true });
+        document.documentElement.addEventListener('mouseleave', onMouseLeave, { passive: true });
+        document.documentElement.addEventListener('mouseenter', onMouseEnter, { passive: true });
+
+        // Touch support
+        const onTouchMove = (e) => {
+          if (e.touches.length > 0) {
+            mouseRef.current.x = e.touches[0].clientX;
+            mouseRef.current.y = e.touches[0].clientY;
+            mouseRef.current.active = true;
+          }
+        };
+        window.addEventListener('touchmove', onTouchMove, { passive: true });
+
+        return () => {
+          window.removeEventListener('mousemove', onMouseMove);
+          window.removeEventListener('mousedown', onMouseDown);
+          window.removeEventListener('mouseup', onMouseUp);
+          window.removeEventListener('mouseover', onMouseOver);
+          document.documentElement.removeEventListener('mouseleave', onMouseLeave);
+          document.documentElement.removeEventListener('mouseenter', onMouseEnter);
+          window.removeEventListener('touchmove', onTouchMove);
+        };
+      }, [mode]);
+
+      // UNIFIED 60/120 FPS CANVAS & CURSOR RENDER LOOP
+      useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d', { alpha: false });
+        const auraEl = document.getElementById('cursor-aura');
+
+        // Lock internal resolution to 1280x720 matching WebP frames 1:1
+        canvas.width = 1280;
+        canvas.height = 720;
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+
+        let frameCounter = 0;
+        let lastFpsCheck = performance.now();
+        let lastTelemetryPush = performance.now();
+        let fps = 60;
+
+        const renderLoop = (time) => {
+          frameCounter++;
+          if (time - lastFpsCheck >= 1000) {
+            fps = Math.round((frameCounter * 1000) / (time - lastFpsCheck));
+            frameCounter = 0;
+            lastFpsCheck = time;
+          }
+
+          const mouse = mouseRef.current;
+
+          // 1. UPDATE CURSOR AURA (Smooth magnetic lerp in GPU space)
+          if (mouse.active && auraEl) {
+            auraPosRef.current.x += (mouse.x - auraPosRef.current.x) * 0.22;
+            auraPosRef.current.y += (mouse.y - auraPosRef.current.y) * 0.22;
+
+            let targetScale = 1;
+            if (mouse.isMouseDown) {
+              targetScale = 0.82;
+            } else if (mouse.isHovering) {
+              targetScale = 1.75;
+            }
+            auraPosRef.current.scale += (targetScale - auraPosRef.current.scale) * 0.22;
+
+            auraEl.style.transform = `translate3d(${auraPosRef.current.x}px, ${auraPosRef.current.y}px, 0) scale(${auraPosRef.current.scale})`;
+
+            if (isEyeContactRef.current) {
+              auraEl.classList.add('eye-contact');
+            } else {
+              auraEl.classList.remove('eye-contact');
+            }
+          }
+
+          // 2. COMPUTE EXACT OBJECT-FIT: COVER GEOMETRY
+          const vw = window.innerWidth;
+          const vh = window.innerHeight;
+          const viewportAspect = vw / vh;
+          const videoAspect = 1280 / 720; // 16:9 ~ 1.7778
+
+          let scale, offsetX, offsetY;
+          if (viewportAspect > videoAspect) {
+            // Viewport is wider than 16:9: scale to width, crop top/bottom
+            scale = vw / 1280;
+            offsetX = 0;
+            offsetY = (vh - 720 * scale) / 2;
+          } else {
+            // Viewport is taller than 16:9: scale to height, crop sides
+            scale = vh / 720;
+            offsetX = (vw - 1280 * scale) / 2;
+            offsetY = 0;
+          }
+
+          // Face center in 1280x720 video: X=640 (0.50), Y=200 (0.278)
+          const rect = canvas.getBoundingClientRect();
+          const faceScreenX = rect.left + offsetX + (1280 * 0.50) * scale;
+          const faceScreenY = rect.top + offsetY + (720 * 0.278) * scale;
+
+          // NATURAL EYE CONTACT DEADZONE
+          // Sized directly to the character's eye/face region (~8% of screen dimension)
+          const screenDim = Math.min(vw, vh);
+          const deadzoneRadius = screenDim * 0.08;
+
+          // Direct mouse delta for ZERO-LATENCY tracking (no double filtering lag)
+          const dx = mouse.x - faceScreenX;
+          const dy = mouse.y - faceScreenY;
+          const dist = Math.hypot(dx, dy);
+
+          let targetAngle = targetAngleRef.current;
+
+          if (mode === 'orbit') {
+            orbitAngleRef.current += 0.025; // Smooth 360° circular showcase
+            targetAngle = orbitAngleRef.current;
+            isEyeContactRef.current = false;
+          } else if (mode === 'compass') {
+            targetAngle = targetAngleRef.current;
+          } else {
+            // Interactive tracking mode
+            if (!mouse.active) {
+              isEyeContactRef.current = true;
+            } else {
+              // Direct eye contact when hovering over the face
+              isEyeContactRef.current = dist < deadzoneRadius;
+            }
+
+            // CRITICAL FIX: ALWAYS update targetAngle when cursor moves!
+            // Zero deadband on angle tracking prevents the character from ever getting stuck!
+            if (dist > 1.0) {
+              targetAngle = Math.atan2(dy, dx);
+              targetAngleRef.current = targetAngle;
+            }
+          }
+
+          // FAST & ULTRA-SMOOTH SHORTEST-PATH CIRCULAR ANGULAR LERP (~35ms response)
+          // Factor 0.24 provides instant, lifelike tracking with zero perceived lag
+          currentAngleRef.current = lerpAngle(currentAngleRef.current, targetAngle, 0.24);
+
+          // Map smoothed angle to nearest frame index 0..63
+          const norm = (currentAngleRef.current % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+          const frameIndex = Math.round((norm / (Math.PI * 2)) * 64) % 64;
+
+          // ZERO-GHOSTING 100% CRISP CANVAS DRAW
+          // Only redraw when frame index or eye-contact state changes (massive GPU saving)
+          const needsRedraw = 
+            frameIndex !== lastDrawnFrameIndexRef.current || 
+            isEyeContactRef.current !== lastDrawnEyeContactRef.current;
+
+          if (needsRedraw) {
+            lastDrawnFrameIndexRef.current = frameIndex;
+            lastDrawnEyeContactRef.current = isEyeContactRef.current;
+
+            // 1. Clear with exact studio background color
+            ctx.fillStyle = '#eb0e09';
+            ctx.fillRect(0, 0, 1280, 720);
+
+            // 2. Draw EXACTLY ONE crisp frame at 100% opacity (no alpha blending)
+            ctx.globalAlpha = 1.0;
+
+            if (isEyeContactRef.current && centerFrameRef.current && centerFrameRef.current.complete) {
+              ctx.drawImage(centerFrameRef.current, 0, 0, 1280, 720);
+              lastRenderedImgRef.current = centerFrameRef.current;
+            } else {
+              const currentImg = framesRef.current[frameIndex];
+              if (currentImg && currentImg.complete && currentImg.naturalWidth > 0) {
+                ctx.drawImage(currentImg, 0, 0, 1280, 720);
+                lastRenderedImgRef.current = currentImg;
+              } else if (lastRenderedImgRef.current) {
+                ctx.drawImage(lastRenderedImgRef.current, 0, 0, 1280, 720);
+              }
+            }
+          }
+
+          // Throttled Telemetry push ONLY when HUD is actively opened by user
+          // Keeps React thread completely silent (0% CPU) during normal interaction
+          if (showHudRef.current && time - lastTelemetryPush > 100) {
+            lastTelemetryPush = time;
+            const deg = Math.round((norm * 180) / Math.PI);
+            let directionLabel = 'RIGHT';
+            if (isEyeContactRef.current) directionLabel = 'CENTER (EYE CONTACT)';
+            else if (deg >= 23 && deg < 68) directionLabel = 'DOWN-RIGHT';
+            else if (deg >= 68 && deg < 113) directionLabel = 'DOWN';
+            else if (deg >= 113 && deg < 158) directionLabel = 'DOWN-LEFT';
+            else if (deg >= 158 && deg < 203) directionLabel = 'LEFT';
+            else if (deg >= 203 && deg < 248) directionLabel = 'UP-LEFT';
+            else if (deg >= 248 && deg < 293) directionLabel = 'UP';
+            else if (deg >= 293 && deg < 338) directionLabel = 'UP-RIGHT';
+            else directionLabel = 'RIGHT';
+
+            setTelemetry({
+              angleDeg: deg,
+              direction: directionLabel,
+              frameIndex,
+              isEyeContact: isEyeContactRef.current,
+              fps,
+            });
+          }
+
+          animFrameIdRef.current = requestAnimationFrame(renderLoop);
+        };
+
+        animFrameIdRef.current = requestAnimationFrame(renderLoop);
+
+        return () => {
+          if (animFrameIdRef.current) {
+            cancelAnimationFrame(animFrameIdRef.current);
+          }
+        };
+      }, [mode]);
+
+      // Set compass direction manually
+      const setCompass = (dir) => {
+        if (dir === 'CENTER') {
+          isEyeContactRef.current = true;
+          setMode('compass');
+        } else {
+          isEyeContactRef.current = false;
+          targetAngleRef.current = COMPASS_ANGLES[dir];
+          setMode('compass');
+        }
+      };
+
+      // Projects data (Computer Engineering & Python/Django journey)
+      // Space reserved so you can easily add your own projects as you build them!
+      const projects = [
+        {
+          id: '01',
+          title: 'Django Full-Stack Web App',
+          category: 'PYTHON • DJANGO • SQLITE/POSTGRESQL',
+          tech: 'Python 3, Django, SQLite, HTML5, Tailwind CSS',
+          desc: 'A full-featured web application with user authentication, relational database models, CRUD operations, and structured MTV architecture.',
+          liveUrl: '#'
+        },
+        {
+          id: '02',
+          title: 'Python Automation & Scripting',
+          category: 'PYTHON • AUTOMATION • APIS',
+          tech: 'Python, REST APIs, JSON Processing, Web Scraping',
+          desc: 'Automated utility scripts for parsing real-world datasets, interacting with external web APIs, and automating repetitive tasks.',
+          liveUrl: '#'
+        },
+        {
+          id: '03',
+          title: 'Future Project (In Progress)',
+          category: 'LEARNING & BUILDING • COMING SOON',
+          tech: 'Python, Django REST Framework, Web Architecture',
+          desc: 'Space reserved for upcoming software engineering projects, data structures implementations, and full-stack software as my journey continues.',
+          isFuture: true,
+          liveUrl: '#'
+        }
+      ];
+
+      return (
+        <div className="relative min-h-screen bg-[#eb0e09] text-white selection:bg-white selection:text-[#eb0e09]">
+
+          {/* FLOATING FROSTED-GLASS NAVIGATION PILL */}
+          <header className="fixed top-6 left-1/2 -translate-x-1/2 z-50 pointer-events-auto">
+            <nav className="frosted-nav px-5 py-2.5 rounded-full flex items-center gap-1 sm:gap-2 shadow-2xl">
+              <a 
+                href="#hero" 
+                className="px-3.5 py-1.5 rounded-full text-xs font-mono font-medium tracking-widest text-white/80 hover:text-white hover:bg-white/10 transition-all"
+              >
+                [HOME]
+              </a>
+              <a 
+                href="#work" 
+                className="px-3.5 py-1.5 rounded-full text-xs font-mono font-medium tracking-widest text-white/80 hover:text-white hover:bg-white/10 transition-all"
+              >
+                [PROJECTS]
+              </a>
+              <a 
+                href="#about" 
+                className="px-3.5 py-1.5 rounded-full text-xs font-mono font-medium tracking-widest text-white/80 hover:text-white hover:bg-white/10 transition-all"
+              >
+                [ABOUT]
+              </a>
+              <a 
+                href="#contact" 
+                className="px-3.5 py-1.5 rounded-full text-xs font-mono font-medium tracking-widest text-white/80 hover:text-white hover:bg-white/10 transition-all"
+              >
+                [CONTACT]
+              </a>
+            </nav>
+          </header>
+
+          {/* HERO SECTION */}
+          <section id="hero" className="relative w-screen h-screen overflow-hidden flex flex-col justify-between">
+            
+            {/* FULL SCREEN CANVAS (100vw, 100vh, object-fit: cover)
+                CRITICAL CONSTRAINT 1: Zero CSS 3D transforms. Body 100% rock-solid motionless.
+            */}
+            <div className="absolute inset-0 w-screen h-screen pointer-events-none z-10 flex items-center justify-center">
+              <canvas 
+                ref={canvasRef} 
+                className="character-canvas"
+              />
+            </div>
+
+            {/* Asset Loading Banner */}
+            {framesLoadedCount < 65 && (
+              <div className="absolute inset-0 z-30 flex items-center justify-center bg-[#eb0e09]/95 backdrop-blur-md">
+                <div className="text-center font-mono space-y-3">
+                  <div className="w-10 h-10 border-2 border-white/20 border-t-white rounded-full animate-spin mx-auto"></div>
+                  <p className="text-xs tracking-widest uppercase">PRELOADING 64 WEBP ROTATION FRAMES</p>
+                  <p className="text-[10px] text-white/60">{framesLoadedCount} / 65 READY</p>
+                </div>
+              </div>
+            )}
+
+            {/* Top Bar Status Indicator (Top-Right) */}
+            <div className="absolute top-6 right-8 z-30 hidden lg:flex items-center gap-3 frosted-nav px-4 py-2 rounded-full pointer-events-auto">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+              </span>
+              <span className="text-[11px] font-mono tracking-wider text-white/90">OPEN TO INTERNSHIPS & OPPORTUNITIES</span>
+            </div>
+
+            {/* Top Bar Location (Top-Left) */}
+            <div className="absolute top-6 left-8 z-30 hidden lg:flex items-center gap-2 frosted-nav px-4 py-2 rounded-full pointer-events-auto text-[11px] font-mono text-white/80">
+              <span className="text-gold">✦</span>
+              <span>ANUP • COMPUTER ENGINEERING STUDENT</span>
+            </div>
+
+            {/* HERO TYPOGRAPHY (BOTTOM-LEFT) */}
+            <div className="relative z-30 mt-auto pb-10 md:pb-14 pl-8 md:pl-16 max-w-xl pointer-events-auto space-y-4">
+              
+              {/* "Hi, I'm" in clean, spaced modern sans-serif */}
+              <div className="flex items-center gap-3">
+                <span className="text-sm md:text-base font-sans font-medium uppercase tracking-[0.3em] text-white/90">
+                  Hi, I'm
+                </span>
+                <span className="w-10 h-[1.5px] bg-white/40"></span>
+              </div>
+
+              {/* Name in large, elegant cursive script with soft drop shadow */}
+              <h1 className="font-dancing text-6xl sm:text-7xl md:text-8xl lg:text-9xl text-white font-bold leading-none name-shadow select-none">
+                Anup
+              </h1>
+
+              {/* Compact 3-line bio about Computer Engineering & Python/Django */}
+              <p className="text-xs sm:text-sm md:text-[15px] text-white/90 font-sans font-light leading-relaxed max-w-[360px] drop-shadow-md">
+                Computer Engineering student passionate about learning and building. Exploring Python & Django, curious about new technologies, and excited to solve real-world problems.
+              </p>
+
+              {/* Action Buttons: LinkedIn, Email, Resume, Contact */}
+              <div className="pt-2 flex flex-wrap items-center gap-3">
+                <a
+                  href={formatUrl(PERSONAL_LINKS.linkedin)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-white text-[#eb0e09] font-sans font-semibold text-xs md:text-sm px-6 py-3 rounded-full flex items-center gap-2 hover:bg-gold hover:text-[#120202] hover:scale-105 active:scale-95 transition-all shadow-xl group"
+                >
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                    <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.738-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
+                  </svg>
+                  <span>LinkedIn Profile</span>
+                  <span className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform text-xs">
+                    ↗
+                  </span>
+                </a>
+
+                <a
+                  href={gmailComposeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-white/10 backdrop-blur-md border border-white/40 text-white font-sans font-semibold text-xs md:text-sm px-5 py-3 rounded-full flex items-center gap-2 hover:bg-white/20 hover:border-white hover:scale-105 active:scale-95 transition-all shadow-xl"
+                  title="Compose email directly in Gmail"
+                >
+                  <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                    <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+                  </svg>
+                  <span>Email</span>
+                  <span className="text-xs">↗</span>
+                </a>
+
+                <button
+                  onClick={() => setShowResumeModal(true)}
+                  className="bg-white/10 backdrop-blur-md border border-white/40 text-white font-sans font-semibold text-xs md:text-sm px-5 py-3 rounded-full flex items-center gap-2 hover:bg-white/20 hover:border-white hover:scale-105 active:scale-95 transition-all shadow-xl"
+                >
+                  <span>Student Resume</span>
+                </button>
+
+                <a
+                  href="#contact"
+                  className="text-white/80 hover:text-white font-mono text-xs px-3 py-2 transition-colors"
+                >
+                  [Contact Me]
+                </a>
+              </div>
+
+            </div>
+
+
+
+          </section>
+
+          {/* WORK / SELECTED PROJECTS SECTION */}
+          <section id="work" className="relative z-30 py-32 px-6 md:px-16 max-w-7xl mx-auto">
+            <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-4 border-b border-white/20 pb-8">
+              <div>
+                <span className="text-xs font-mono text-gold tracking-widest uppercase block mb-2">PORTFOLIO</span>
+                <h2 className="font-syne font-bold text-4xl md:text-6xl tracking-tight">PROJECTS & LEARNING</h2>
+              </div>
+              <p className="text-white/70 max-w-md text-sm md:text-base leading-relaxed font-light">
+                Hands-on projects built while learning Python, Django, database systems, and computer engineering fundamentals.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {projects.map((p) => (
+                <div 
+                  key={p.id}
+                  className={`glass-card p-8 rounded-2xl flex flex-col justify-between hover:border-white/50 transition-all duration-300 group ${p.isFuture ? 'col-span-1 md:col-span-2 border-dashed border-white/30 bg-white/[0.03]' : ''}`}
+                  style={{ minHeight: p.isFuture ? '240px' : '320px' }}
+                >
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center text-xs font-mono text-gold">
+                      <span>{p.id} // {p.isFuture ? 'FUTURE SPACE' : 'PROJECT'}</span>
+                      <span className="text-[10px] text-white/50">{p.category}</span>
+                    </div>
+                    <h3 className="font-syne font-bold text-2xl group-hover:text-gold transition-colors pt-1">
+                      {p.title}
+                    </h3>
+                    <p className="text-xs font-mono text-white/60 pb-1">{p.tech}</p>
+                    <p className="text-sm text-white/80 font-light leading-relaxed">
+                      {p.desc}
+                    </p>
+                  </div>
+
+                  <div className="pt-6 border-t border-white/10 flex justify-between items-center">
+                    <span className="text-xs font-mono text-white/70 group-hover:text-white transition-colors">
+                      {p.isFuture ? 'SPACE RESERVED FOR NEW ACHIEVEMENTS' : 'LEARN MORE'}
+                    </span>
+                    <span className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center group-hover:bg-white group-hover:text-[#eb0e09] transition-all">
+                      {p.isFuture ? '✦' : '→'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* ABOUT SECTION */}
+          <section id="about" className="relative z-30 py-32 px-6 md:px-16 bg-[#120202] border-t border-white/10">
+            <div className="max-w-5xl mx-auto space-y-16">
+              
+              <div className="space-y-4">
+                <span className="text-xs font-mono text-gold tracking-widest uppercase block">BIOGRAPHY & ASPIRATION</span>
+                <h2 className="font-syne font-bold text-4xl md:text-5xl">ENGINEERING JOURNEY & CURIOSITY</h2>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-12 font-light text-white/85 text-base md:text-lg leading-relaxed">
+                <p>
+                  I am a Computer Engineering student driven by genuine curiosity, continuous growth, and a passion for technology. I believe the best way to master engineering is through hands-on experimentation—building projects from the ground up, understanding core concepts deeply, and constantly improving.
+                </p>
+                <p>
+                  Currently, I am diving deep into Python and the Django framework to build robust, structured backends. From understanding low-level computer architecture and algorithms to creating responsive web applications, I am always excited to learn new tools and build things that solve real problems.
+                </p>
+              </div>
+
+              {/* Skills Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 pt-8 border-t border-white/10 font-mono text-xs">
+                <div className="space-y-2">
+                  <span className="text-gold font-bold block">PROGRAMMING</span>
+                  <p className="text-white/70">Python 3 (Core & OOP)</p>
+                  <p className="text-white/70">C / C++ (Foundations)</p>
+                  <p className="text-white/70">JavaScript (ES6+)</p>
+                  <p className="text-white/70">Data Structures & Logic</p>
+                </div>
+                <div className="space-y-2">
+                  <span className="text-gold font-bold block">WEB & BACKEND</span>
+                  <p className="text-white/70">Django Web Framework</p>
+                  <p className="text-white/70">Django ORM & Models</p>
+                  <p className="text-white/70">SQLite / Database Basics</p>
+                  <p className="text-white/70">HTML5 & Tailwind CSS</p>
+                </div>
+                <div className="space-y-2">
+                  <span className="text-gold font-bold block">DEV TOOLS</span>
+                  <p className="text-white/70">Git & GitHub</p>
+                  <p className="text-white/70">VS Code & Terminal</p>
+                  <p className="text-white/70">Virtual Environments (venv)</p>
+                  <p className="text-white/70">Linux & Command Line</p>
+                </div>
+                <div className="space-y-2">
+                  <span className="text-gold font-bold block">LEARNING NEXT</span>
+                  <p className="text-white/70">Django REST Framework</p>
+                  <p className="text-white/70">PostgreSQL Integration</p>
+                  <p className="text-white/70">Frontend React Basics</p>
+                  <p className="text-white/70">Cloud & Deployment</p>
+                </div>
+              </div>
+
+            </div>
+          </section>
+
+          {/* CONTACT SECTION */}
+          <section id="contact" className="relative z-30 py-32 px-6 md:px-16 bg-[#100101] border-t border-white/10">
+            <div className="max-w-4xl mx-auto text-center space-y-8">
+              <span className="text-xs font-mono text-gold tracking-widest uppercase block">GET IN TOUCH</span>
+              <h2 className="font-syne font-extrabold text-4xl md:text-6xl tracking-tight">
+                LET’S CONNECT & GROW TOGETHER.
+              </h2>
+              <p className="text-white/75 text-base md:text-lg max-w-xl mx-auto font-light">
+                Always eager to connect with mentors, fellow students, and engineering teams. Open to internships, collaborations, and learning opportunities.
+              </p>
+              
+              <div className="pt-6 flex flex-wrap justify-center items-center gap-4">
+                <a 
+                  href={formatUrl(PERSONAL_LINKS.linkedin)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-white text-[#eb0e09] font-sans font-semibold text-sm px-8 py-4 rounded-full hover:bg-gold hover:text-[#120202] hover:scale-105 active:scale-95 transition-all shadow-xl flex items-center gap-2.5"
+                >
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                    <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.738-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
+                  </svg>
+                  <span>Connect on LinkedIn</span>
+                  <span>↗</span>
+                </a>
+
+                {/* Direct Gmail Web Compose Link - Guaranteed to work in all browsers without email client setup */}
+                <a 
+                  href={gmailComposeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="frosted-nav text-white font-sans font-semibold text-sm px-8 py-4 rounded-full hover:bg-white/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 shadow-xl"
+                  title="Open compose window directly in Gmail"
+                >
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                    <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+                  </svg>
+                  <span>Send an Email (Gmail)</span>
+                  <span>↗</span>
+                </a>
+
+                {/* Instant Copy Email to Clipboard Button */}
+                <button
+                  onClick={handleCopyEmail}
+                  className="frosted-nav text-white/90 font-mono text-xs px-6 py-4 rounded-full hover:bg-white/20 hover:text-white transition-all flex items-center gap-2 border border-white/20 shadow-xl"
+                  title="Click to copy email address"
+                >
+                  <span>{copiedEmail ? '✓ Copied to Clipboard!' : cleanEmail}</span>
+                  <span className="text-gold">{copiedEmail ? '✓' : '⧉'}</span>
+                </button>
+
+                <button
+                  onClick={() => setShowResumeModal(true)}
+                  className="frosted-nav text-white/80 font-sans font-medium text-sm px-6 py-4 rounded-full hover:bg-white/20 hover:text-white transition-all"
+                >
+                  Student Profile
+                </button>
+              </div>
+
+              {/* Desktop Mail App fallback link */}
+              <div className="pt-2 text-center">
+                <a 
+                  href={mailtoUrl} 
+                  className="text-[11px] font-mono text-white/40 hover:text-white/80 underline transition-colors"
+                >
+                  Prefer desktop email client? Send via mailto
+                </a>
+              </div>
+
+              <div className="pt-16 border-t border-white/10 flex flex-wrap justify-center gap-8 text-xs font-mono text-white/60">
+                <a href={formatUrl(PERSONAL_LINKS.linkedin)} target="_blank" rel="noopener noreferrer" className="hover:text-gold transition-colors flex items-center gap-1">
+                  <span>LINKEDIN</span>
+                  <span className="text-[10px]">↗</span>
+                </a>
+                <a href={formatUrl(PERSONAL_LINKS.github)} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
+                  GITHUB
+                </a>
+                <a href={gmailComposeUrl} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors flex items-center gap-1">
+                  <span>EMAIL (GMAIL)</span>
+                  <span className="text-[10px]">↗</span>
+                </a>
+                <button onClick={handleCopyEmail} className="hover:text-gold transition-colors">
+                  {copiedEmail ? '✓ COPIED' : 'COPY EMAIL'}
+                </button>
+              </div>
+            </div>
+          </section>
+
+          {/* RESUME MODAL */}
+          {showResumeModal && (
+            <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-6">
+              <div className="glass-card max-w-2xl w-full p-8 md:p-10 rounded-2xl space-y-6 max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                  <div>
+                    <h3 className="font-syne font-bold text-2xl text-white">ANUP</h3>
+                    <span className="text-xs font-mono text-gold">COMPUTER ENGINEERING STUDENT • PYTHON & DJANGO</span>
+                  </div>
+                  <button 
+                    onClick={() => setShowResumeModal(false)}
+                    className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-sm"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="space-y-6 text-xs font-mono text-white/80">
+                  <div className="space-y-2">
+                    <span className="text-gold font-bold block text-sm">PROFILE & OBJECTIVE</span>
+                    <p className="font-sans text-sm font-light leading-relaxed text-white/90">
+                      Enthusiastic Computer Engineering student passionate about learning, writing clean code, and building practical web software with Python and Django. Eager to grow through hands-on projects, open-source contribution, and team collaboration.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className="text-gold font-bold block text-sm">EDUCATION</span>
+                    <div className="p-4 rounded-xl bg-white/5 space-y-1">
+                      <div className="flex justify-between font-bold text-white">
+                        <span>Bachelor of Science in Computer Engineering</span>
+                        <span>Undergraduate</span>
+                      </div>
+                      <p className="text-white/60">Core coursework: Data Structures, Algorithms, Computer Architecture, Object-Oriented Programming, Database Systems.</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <span className="text-gold font-bold block text-sm">HANDS-ON PROJECTS</span>
+                    <div className="p-4 rounded-xl bg-white/5 space-y-1">
+                      <div className="flex justify-between font-bold text-white">
+                        <span>Django Full-Stack Web Application</span>
+                        <span>Python / Django</span>
+                      </div>
+                      <p className="text-white/60">Engineered user authentication, relational database models, and CRUD operations with Django templates.</p>
+                    </div>
+                    <div className="p-4 rounded-xl bg-white/5 space-y-1">
+                      <div className="flex justify-between font-bold text-white">
+                        <span>Python Automation & Scripting</span>
+                        <span>Python / APIs</span>
+                      </div>
+                      <p className="text-white/60">Built scripts for automated task execution, data parsing, and RESTful API consumption.</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className="text-gold font-bold block text-sm">FUTURE GOALS (SPACE RESERVED)</span>
+                    <p className="text-white/70 font-sans text-xs italic">
+                      "Continuously building and learning. More projects, certifications, and achievements will be added here as I advance through my engineering journey."
+                    </p>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-white/10 flex flex-wrap justify-between items-center gap-3">
+                  <div className="flex items-center gap-4">
+                    <a 
+                      href={formatUrl(PERSONAL_LINKS.linkedin)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-gold font-mono text-xs hover:text-white underline flex items-center gap-1"
+                    >
+                      <span>Connect on LinkedIn</span>
+                      <span>↗</span>
+                    </a>
+                    <a 
+                      href={gmailComposeUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-white/70 font-mono text-xs hover:text-white underline flex items-center gap-1"
+                    >
+                      <span>{cleanEmail}</span>
+                      <span>↗</span>
+                    </a>
+                  </div>
+                  <button 
+                    onClick={() => setShowResumeModal(false)}
+                    className="bg-white text-[#eb0e09] px-6 py-2.5 rounded-full font-sans font-semibold text-xs hover:bg-white/90"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

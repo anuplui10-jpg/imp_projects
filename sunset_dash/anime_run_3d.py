@@ -3,7 +3,7 @@ from ursina.shaders import lit_with_shadows_shader, unlit_shader
 from ursina.shaders.unlit_with_fog_shader import unlit_with_fog_shader
 from math import sin, cos, radians, degrees, asin, atan2, sqrt, pi
 from pathlib import Path
-import random, wave, struct
+import random, wave, struct, json, os
 
 # =====================================================================
 #  ANIME RUN   (Ursina)
@@ -254,13 +254,121 @@ CHASER_LOOKS = [
 
 
 # =====================================================================
+#  PERMANENT COIN WALLET + SKIN UNLOCK SAVE
+#  Save data is stored OUTSIDE the GitHub/game source folder.
+# =====================================================================
+SAVE_DIR = Path.home() / '.anime_run'
+SAVE_FILE = SAVE_DIR / 'save_data.json'
+LEGACY_SAVE_FILE = HERE / 'anime_run_save.json'
+
+
+def load_save_data():
+    """Load the player's wallet and unlocks, or create safe defaults."""
+    defaults = {
+        'total_coins': 0,
+        'unlocked': {},
+        'selected': {'runner': 0, 'chaser': 0},
+    }
+
+    data = None
+    for candidate in (SAVE_FILE, LEGACY_SAVE_FILE):
+        try:
+            if candidate.is_file():
+                loaded = json.loads(candidate.read_text(encoding='utf-8'))
+                if isinstance(loaded, dict):
+                    data = loaded
+                    break
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+            # A damaged save must not stop the game from launching.
+            continue
+
+    if data is None:
+        data = defaults.copy()
+
+    try:
+        total = int(data.get('total_coins', 0))
+        data['total_coins'] = max(0, total)
+    except (TypeError, ValueError, OverflowError):
+        data['total_coins'] = 0
+
+    old_unlocked = data.get('unlocked', {})
+    if not isinstance(old_unlocked, dict):
+        old_unlocked = {}
+
+    old_selected = data.get('selected', {})
+    if not isinstance(old_selected, dict):
+        old_selected = {}
+
+    data['unlocked'] = {}
+    data['selected'] = {}
+
+    for kind, looks in (('runner', RUNNER_LOOKS), ('chaser', CHASER_LOOKS)):
+        count = len(looks)
+        previous = old_unlocked.get(kind, [])
+        if not isinstance(previous, list):
+            previous = []
+
+        flags = [False] * count
+        flags[0] = True  # The first/default skin is always free.
+        for index in range(1, count):
+            if index < len(previous):
+                flags[index] = previous[index] is True
+        data['unlocked'][kind] = flags
+
+        try:
+            selected = int(old_selected.get(kind, 0))
+        except (TypeError, ValueError, OverflowError):
+            selected = 0
+        if selected < 0 or selected >= count or not flags[selected]:
+            selected = 0
+        data['selected'][kind] = selected
+
+    return data
+
+
+SAVE_DATA = load_save_data()
+
+
+def save_player_data():
+    """Write progress safely; a failed save will not crash the game."""
+    SAVE_DATA['unlocked'] = {
+        kind: [entry[1] for entry in SKINS[kind]]
+        for kind in ('runner', 'chaser')
+    }
+    SAVE_DATA['selected'] = dict(selected_skin)
+
+    temp_file = SAVE_DIR / 'save_data.tmp'
+    try:
+        SAVE_DIR.mkdir(parents=True, exist_ok=True)
+        temp_file.write_text(
+            json.dumps(SAVE_DATA, indent=2),
+            encoding='utf-8'
+        )
+        os.replace(str(temp_file), str(SAVE_FILE))
+    except OSError as exc:
+        print('Could not save Anime Run progress:', exc)
+        try:
+            if temp_file.exists():
+                temp_file.unlink()
+        except OSError:
+            pass
+
+
+
+# =====================================================================
 #  MAIN MENU + SKINS SCREEN (made now, shown after loading)
 # =====================================================================
-SKINS = {                              # (name, unlocked?)  - made from the looks above
-    'runner': [(l['name'], True) for l in RUNNER_LOOKS],
-    'chaser': [(l['name'], True) for l in CHASER_LOOKS],
+SKINS = {                              # (name, unlocked?)
+    'runner': [
+        (look['name'], unlocked)
+        for look, unlocked in zip(RUNNER_LOOKS, SAVE_DATA['unlocked']['runner'])
+    ],
+    'chaser': [
+        (look['name'], unlocked)
+        for look, unlocked in zip(CHASER_LOOKS, SAVE_DATA['unlocked']['chaser'])
+    ],
 }
-selected_skin = {'runner': 0, 'chaser': 0}
+selected_skin = dict(SAVE_DATA['selected'])
 skin_cards = {}
 
 menu_ui = Entity(parent=camera.ui, enabled=False)
@@ -283,6 +391,14 @@ Text('A / D  move     SPACE  jump     S  slide', parent=menu_ui, position=(-0.85
 skins_ui = Entity(parent=camera.ui, enabled=False)
 Entity(parent=skins_ui, model='quad', scale=(1.62, 0.7), y=-0.2, color=color.rgba(0.03, 0.02, 0.12, 0.8), z=2, shader=None)
 Text('SKINS', parent=skins_ui, origin=(0, 0), position=(0, 0.44), scale=3.5, color=PINK)
+wallet_text = Text(
+    'YOUR COINS: 0', parent=skins_ui, origin=(0, 0),
+    position=(0, 0.33), scale=1.35, color=color.gold
+)
+skin_message = Text(
+    'Click a locked skin to unlock it', parent=skins_ui, origin=(0, 0),
+    position=(0, -0.39), scale=0.85, color=color.white
+)
 for kind, label, y in (('runner', 'RUNNER', -0.02), ('chaser', 'CHASER', -0.27)):
     Text(label, parent=skins_ui, position=(-0.78, y + 0.15), scale=1.4, color=CYAN)
     n = len(SKINS[kind])
@@ -294,14 +410,24 @@ btn_back = Button(parent=skins_ui, text='BACK', scale=(0.3, 0.07), position=(0, 
 
 
 def refresh_skins():
-    for (kind, i), b in skin_cards.items():
+    wallet_text.text = f"YOUR COINS: {SAVE_DATA['total_coins']:,}"
+
+    for (kind, i), button in skin_cards.items():
         name, unlocked = SKINS[kind][i]
+        price = i * 5000
+
         if not unlocked:
-            b.color, b.highlight_color, b.text = color.rgb(0.2, 0.2, 0.26), color.rgb(0.2, 0.2, 0.26), f'{name}\nLOCKED'
+            button.color = color.rgb(0.2, 0.2, 0.26)
+            button.highlight_color = color.rgb(0.3, 0.3, 0.4)
+            button.text = f'{name}\nLOCKED {price:,}'
         elif selected_skin[kind] == i:
-            b.color, b.highlight_color, b.text = color.rgb(0.15, 0.65, 0.35), color.rgb(0.25, 0.8, 0.45), f'{name}\nSELECTED'
+            button.color = color.rgb(0.15, 0.65, 0.35)
+            button.highlight_color = color.rgb(0.25, 0.8, 0.45)
+            button.text = f'{name}\nSELECTED'
         else:
-            b.color, b.highlight_color, b.text = color.rgb(0.15, 0.45, 0.8), color.rgb(0.3, 0.6, 0.95), f'{name}\nSelect'
+            button.color = color.rgb(0.15, 0.45, 0.8)
+            button.highlight_color = color.rgb(0.3, 0.6, 0.95)
+            button.text = f'{name}\nSELECT'
 
 
 def apply_skins():
@@ -318,10 +444,27 @@ def apply_skins():
 
 
 def select_skin(kind, i):
-    if SKINS[kind][i][1]:
-        selected_skin[kind] = i
-        refresh_skins()
-        apply_skins()
+    name, unlocked = SKINS[kind][i]
+
+    if not unlocked:
+        price = i * 5000  # 1st unlock = 5,000; then 10,000; 15,000...
+        balance = SAVE_DATA['total_coins']
+
+        if balance < price:
+            missing = price - balance
+            skin_message.text = f'NOT ENOUGH COINS - NEED {missing:,} MORE'
+            return
+
+        SAVE_DATA['total_coins'] -= price
+        SKINS[kind][i] = (name, True)
+        skin_message.text = f'{name} UNLOCKED!'
+    else:
+        skin_message.text = f'{name} SELECTED!'
+
+    selected_skin[kind] = i
+    save_player_data()
+    refresh_skins()
+    apply_skins()
 
 
 def set_hud(on):
@@ -1222,8 +1365,8 @@ def red_flash():
 # =====================================================================
 #  9. GAME FLOW
 # =====================================================================
-player = Human()
-bear = Bear()
+player = Human(RUNNER_LOOKS[selected_skin['runner']])
+bear = Bear(CHASER_LOOKS[selected_skin['chaser']])
 load_step(0.72, 'Creating characters')
 
 
@@ -1553,6 +1696,8 @@ def update():
                 destroy(c)
                 g.coins.remove(c)
                 st.coins += 1
+                SAVE_DATA['total_coins'] += 1
+                save_player_data()
 
     # ---------- camera ----------
     st.cam_yaw += ((sg.h * 90 - st.cam_yaw + 180) % 360 - 180) * min(1, 5.5 * dt)
@@ -1578,7 +1723,7 @@ def update():
     score_text.position = (tl.x + 0.03, 0.47)
     coin_text.position = (tl.x + 0.03, 0.42)
     score_text.text = f'Score: {int(st.cum - START_CUM) + st.coins * 10}'
-    coin_text.text = f'Coins: {st.coins}'
+    coin_text.text = f"Run: {st.coins}  |  Bank: {SAVE_DATA['total_coins']:,}"
     danger_fill.scale_x = 0.3 * max(0, min(1, (START_GAP - st.gap) / (START_GAP - CAUGHT_GAP)))
     if sg.turn and sg.L - 35 < st.s < sg.L + W:
         turn_text.text = '>>> TURN RIGHT  (D)' if sg.turn == 1 else '<<< TURN LEFT  (A)'
